@@ -1,0 +1,33 @@
+{
+  "train_file": "Dataset1_Mouse_Spleen1/adata_RNA.h5ad",
+  "test_file": "Dataset2_Mouse_Spleen2/adata_RNA.h5ad",
+  "in_tissue_filter": 1,
+  "min_cells": 3,
+  "target_total_genes": 3500,
+  "train_spots_before": 2568,
+  "test_spots_before": 2768,
+  "train_spots_after_in_tissue": 2568,
+  "test_spots_after_in_tissue": 2768,
+  "common_genes_before_filter": 32285,
+  "genes_after_min_cells_filter": 16153,
+  "forced_gene_candidates_n": 25,
+  "forced_genes_kept_n": 25,
+  "forced_genes_missing_after_filter_n": 0,
+  "final_gene_n": 3500,
+  "train_shape": [
+    2568,
+    3500
+  ],
+  "test_shape": [
+    2768,
+    3500
+  ],
+  "train_z_minmax": [
+    -7.046499252319336,
+    38.296119689941406
+  ],
+  "test_z_minmax": [
+    -16.14697265625,
+    47.70608901977539
+  ]
+}

@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.idea/
+.vscode/
+.claude/
+data/
+raw/
+results/
+*.pt
+*.pth
+*.npy
+*.npz
+*.h5ad
+*.tif
+*.btf
+*.log
