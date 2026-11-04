@@ -19,6 +19,7 @@ GENE_DIR = BASE / "_scheme2_log1p_zscore_hvg3500_force_marker_in_tissue1"
 SAMPLE_DIR = BASE / "samples"
 OUT = BASE / "_hires_resnet18_multiscale512"
 SCALES = [16, 32, 64, 96, 128]
+ENCODER_INPUT_SIZE = 224
 
 
 def read_lines(path: Path) -> list[str]:
@@ -73,13 +74,17 @@ def extract_split(
     if not patches:
         return feats, len(barcodes)
 
-    arr = np.stack(patches).astype(np.float32) / 255.0
-    arr = (arr - mean) / std
-    arr = np.transpose(arr, (0, 3, 1, 2))
     with torch.no_grad():
-        for start in range(0, len(arr), batch_size):
-            end = min(len(arr), start + batch_size)
-            x = torch.from_numpy(arr[start:end]).to(device)
+        for start in range(0, len(patches), batch_size):
+            end = min(len(patches), start + batch_size)
+            # Preserve the sampled field of view; resize the whole crop, without center cropping.
+            arr = np.stack([
+                np.asarray(Image.fromarray(p).resize(
+                    (ENCODER_INPUT_SIZE, ENCODER_INPUT_SIZE), Image.Resampling.BILINEAR))
+                for p in patches[start:end]
+            ]).astype(np.float32) / 255.0
+            arr = np.transpose((arr - mean) / std, (0, 3, 1, 2))
+            x = torch.from_numpy(arr).to(device)
             out = feature_extractor(x).squeeze(-1).squeeze(-1).cpu().numpy().astype(np.float32)
             feats[np.asarray(valid_idx[start:end], dtype=np.int64)] = out
     return feats, len(barcodes) - len(valid_idx)
@@ -118,6 +123,9 @@ def main() -> None:
         "device": str(device),
         "scales": SCALES,
         "feature_dim": 512,
+        "encoder_input_size": [ENCODER_INPUT_SIZE, ENCODER_INPUT_SIZE],
+        "resize_interpolation": "PIL bilinear",
+        "normalization": "ImageNet mean/std after resize and scaling to [0, 1]",
         "train_n": len(train_barcodes),
         "test_n": len(test_barcodes),
         "outputs": {},

@@ -2,12 +2,13 @@
 test section: male "tonsilman").
 
 RNA (fitted on the training section only, applied to the test section):
-  genes detected in >= 20 training spots -> normalize_total(1e4) + log1p ->
+  genes detected in >= 3 training spots -> normalize_total(1e4) + log1p ->
   scanpy highly_variable_genes(flavor="seurat", n_top_genes=3500) -> the selected
   genes are taken from the raw counts -> log1p -> gene-wise z-score with the
   training mean/std.
-Protein: filtered ADT counts -> log1p -> per-protein z-score with the training-section
-mean/std, applied to the test section (test labels never enter the scaling).
+Protein: filtered ADT counts -> log1p -> per-protein z-score separately within
+each section, using that section's own mean/std. Test protein values are used
+only to standardize evaluation targets, never as model inputs or for fitting.
 
 Inputs are the barcode-aligned, in-tissue AnnData files of each section
 (<name>_gene_filter.h5ad and <name>_pro_filter.h5ad: spots shared by the RNA and
@@ -26,7 +27,7 @@ import numpy as np
 import scanpy as sc
 import scipy.sparse as sp
 
-MIN_CELLS = 20
+MIN_CELLS = 3
 N_HVG = 3500
 TARGET_SUM = 1e4
 
@@ -87,16 +88,17 @@ def rna(raw, out, gene_list=None, train="tonsilwoman", test="tonsilman"):
 
 
 def protein(raw, out, train="tonsilwoman", test="tonsilman"):
-    """log1p -> per-protein z-score with the training-section mean/std, applied to both sections."""
+    """log1p -> per-protein z-score fitted independently within each section."""
     a_tr = ad.read_h5ad(raw / train / f"{train}_pro_filter.h5ad")
     a_te = ad.read_h5ad(raw / test / f"{test}_pro_filter.h5ad")
     assert list(a_tr.var_names) == list(a_te.var_names), "protein panels differ between sections"
     y_tr = np.log1p(to_dense(a_tr.X).astype(np.float32))
     y_te = np.log1p(to_dense(a_te.X).astype(np.float32))
-    mean, std = zfit(y_tr)
-    note = "filtered protein: log1p -> per-protein z-score fitted on the training section"
-    save_like(a_tr, zapply(y_tr, mean, std), out / "female" / "pro" / f"{train}_pro_filter_log1p_zscore.h5ad", note)
-    save_like(a_te, zapply(y_te, mean, std), out / "male" / "pro" / f"{test}_pro_filter_log1p_zscore.h5ad", note)
+    mean_tr, std_tr = zfit(y_tr)
+    mean_te, std_te = zfit(y_te)
+    note = "filtered protein: log1p -> per-protein z-score fitted separately within each section"
+    save_like(a_tr, zapply(y_tr, mean_tr, std_tr), out / "female" / "pro" / f"{train}_pro_filter_log1p_zscore.h5ad", note)
+    save_like(a_te, zapply(y_te, mean_te, std_te), out / "male" / "pro" / f"{test}_pro_filter_log1p_zscore.h5ad", note)
 
 
 if __name__ == "__main__":

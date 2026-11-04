@@ -13,6 +13,7 @@ import torch.nn as nn
 from torchvision.models import ResNet18_Weights, resnet18
 
 BASE = Path(os.environ.get("MORPHOPROT_DATA", "data")) / "spleen"
+ENCODER_INPUT_SIZE = 224
 
 
 def load_coords(ds_dir: Path) -> dict[str, tuple[float, float]]:
@@ -64,14 +65,17 @@ def extract_features(
     if not patches:
         return feats, n
 
-    arr = np.stack(patches, axis=0).astype(np.float32) / 255.0
-    arr = (arr - mean) / std
-    arr = np.transpose(arr, (0, 3, 1, 2))
-
     with torch.no_grad():
-        for s in range(0, arr.shape[0], batch_size):
-            e = min(arr.shape[0], s + batch_size)
-            x = torch.from_numpy(arr[s:e]).to(device)
+        for s in range(0, len(patches), batch_size):
+            e = min(len(patches), s + batch_size)
+            # Preserve the sampled field of view; resize the whole crop, without center cropping.
+            arr = np.stack([
+                np.asarray(Image.fromarray(p).resize(
+                    (ENCODER_INPUT_SIZE, ENCODER_INPUT_SIZE), Image.Resampling.BILINEAR))
+                for p in patches[s:e]
+            ]).astype(np.float32) / 255.0
+            arr = np.transpose((arr - mean) / std, (0, 3, 1, 2))
+            x = torch.from_numpy(arr).to(device)
             out = feature_extractor(x).squeeze(-1).squeeze(-1).cpu().numpy().astype(np.float32)
             feats[np.array(valid_idx[s:e], dtype=np.int64)] = out
 
@@ -124,6 +128,9 @@ def main() -> None:
     summary: dict[str, object] = {
         "scales": scales,
         "feature_dim": 512,
+        "encoder_input_size": [ENCODER_INPUT_SIZE, ENCODER_INPUT_SIZE],
+        "resize_interpolation": "PIL bilinear",
+        "normalization": "ImageNet mean/std after resize and scaling to [0, 1]",
         "device": str(device),
         "train_n": len(train_barcodes),
         "test_n": len(test_barcodes),

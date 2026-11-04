@@ -31,7 +31,7 @@ python tests/test_smoke.py      # CPU, random data, about 1 minute
 
 | Step | Script |
 |---|---|
-| Tonsil RNA (3,500 training HVGs, log1p, train-fitted z-score) and protein (log1p, z-score fitted on the training section) | `preprocessing/preprocess_tonsil.py --gene-list gene_lists/tonsil_genes_3500.txt` |
+| Tonsil RNA (3,500 training HVGs, log1p, train-fitted z-score) and protein (log1p, z-score separately within each section) | `preprocessing/preprocess_tonsil.py --gene-list gene_lists/tonsil_genes_3500.txt` |
 | Spleen RNA (3,500 training HVGs, genes of the measured proteins always kept), protein and hires coordinates | `preprocessing/preprocess_spleen.py --gene-list gene_lists/spleen_genes_3500.txt` |
 | Liver RNA (same recipe as spleen) and protein | `preprocessing/preprocess_liver.py --gene-list gene_lists/liver_genes_3500.txt` |
 | Tonsil UNI2-H features, 256–1,280 px fields | `preprocessing/extract_features_tonsil_uni2h.py` (needs access to [MahmoodLab/UNI2-h](https://huggingface.co/MahmoodLab/UNI2-h)) |
@@ -39,8 +39,17 @@ python tests/test_smoke.py      # CPU, random data, about 1 minute
 
 `gene_lists/` holds the 3,500 input genes of each tissue in model column order. Pass
 the list with `--gene-list` to reproduce the paper inputs exactly; without it, the genes are
-reselected from the training section, and their order can depend on the scanpy version. It also
+reselected from the training section, and their membership and order can depend on the scanpy version. It also
 lists the protein-coding genes that are always kept.
+
+For tonsil, dynamic HVG selection retains genes detected in at least **3 training
+spots**, then selects 3,500 HVGs from normalized, log-transformed training RNA.
+
+
+For spleen and liver, each ResNet18 field (16, 32, 64, 96 or 128 hires pixels)
+is resized in full to **224 x 224** with PIL bilinear interpolation before
+conversion to [0, 1] and ImageNet mean/std normalization. No center crop is
+applied. Extraction summaries record the encoder input size and interpolation.
 
 Point `MORPHOPROT_DATA` at a folder with this layout. It defaults to `./data`.
 
@@ -75,11 +84,9 @@ validation. The checkpoint is chosen by validation mean SCC. The four seed predi
 averaged before protein-wise SCC, PCC and RMSE are computed.
 
 ```bash
-# Tonsil and spleen: MorphoProt (full) and the RNA-only / RNA+histology / RNA+graph ablations
 python morphoprot/train_tonsil_spleen.py --datasets tonsil spleen \
     --ablations full rna rna_image rna_graph --seeds 42 99 7 1024
 
-# Liver: MorphoProt (160 epochs / patience 30, train-fitted image-feature z-score)
 python morphoprot/train_liver.py --seeds 42 99 7 1024
 ```
 
