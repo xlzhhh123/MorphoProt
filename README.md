@@ -109,11 +109,6 @@ tests/test_smoke.py       CPU test on random data
 docs/                     overview figure
 ```
 
-## Citation
-
-Xu L., Zheng L., Zhan Y., Zhang Y., Zhang K. *MorphoProt: RNA-conditioned integration of
-multiscale histology for spatial protein inference.* Manuscript under review, 2026.
-
 ## License
 
 MIT. The datasets and the UNI2-H weights keep their own licenses.
