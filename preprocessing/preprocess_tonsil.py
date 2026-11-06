@@ -6,9 +6,9 @@ RNA (fitted on the training section only, applied to the test section):
   scanpy highly_variable_genes(flavor="seurat", n_top_genes=3500) -> the selected
   genes are taken from the raw counts -> log1p -> gene-wise z-score with the
   training mean/std.
-Protein: filtered ADT counts -> log1p -> per-protein z-score separately within
-each section, using that section's own mean/std. Test protein values are used
-only to standardize evaluation targets, never as model inputs or for fitting.
+Protein: filtered ADT counts -> log1p -> per-protein z-score fitted on the
+training section and applied to both sections. Test protein values do not
+contribute to the normalization parameters.
 
 Inputs are the barcode-aligned, in-tissue AnnData files of each section
 (<name>_gene_filter.h5ad and <name>_pro_filter.h5ad: spots shared by the RNA and
@@ -88,17 +88,16 @@ def rna(raw, out, gene_list=None, train="tonsilwoman", test="tonsilman"):
 
 
 def protein(raw, out, train="tonsilwoman", test="tonsilman"):
-    """log1p -> per-protein z-score fitted independently within each section."""
+    """log1p -> per-protein z-score using training-section mean/std for both sections."""
     a_tr = ad.read_h5ad(raw / train / f"{train}_pro_filter.h5ad")
     a_te = ad.read_h5ad(raw / test / f"{test}_pro_filter.h5ad")
     assert list(a_tr.var_names) == list(a_te.var_names), "protein panels differ between sections"
     y_tr = np.log1p(to_dense(a_tr.X).astype(np.float32))
     y_te = np.log1p(to_dense(a_te.X).astype(np.float32))
     mean_tr, std_tr = zfit(y_tr)
-    mean_te, std_te = zfit(y_te)
-    note = "filtered protein: log1p -> per-protein z-score fitted separately within each section"
+    note = "filtered protein: log1p -> per-protein z-score fitted on the training section"
     save_like(a_tr, zapply(y_tr, mean_tr, std_tr), out / "female" / "pro" / f"{train}_pro_filter_log1p_zscore.h5ad", note)
-    save_like(a_te, zapply(y_te, mean_te, std_te), out / "male" / "pro" / f"{test}_pro_filter_log1p_zscore.h5ad", note)
+    save_like(a_te, zapply(y_te, mean_tr, std_tr), out / "male" / "pro" / f"{test}_pro_filter_log1p_zscore.h5ad", note)
 
 
 if __name__ == "__main__":

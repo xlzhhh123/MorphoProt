@@ -13,7 +13,7 @@ spot it combines:
 ## Installation
 
 ```bash
-git clone https://github.com/<account>/MorphoProt.git
+git clone https://github.com/xlzhhh123/MorphoProt.git
 cd MorphoProt
 conda create -n morphoprot python=3.11 -y && conda activate morphoprot
 pip install torch --index-url https://download.pytorch.org/whl/cu121   # pick the build for your CUDA
@@ -31,7 +31,7 @@ python tests/test_smoke.py      # CPU, random data, about 1 minute
 
 | Step | Script |
 |---|---|
-| Tonsil RNA (3,500 training HVGs, log1p, train-fitted z-score) and protein (log1p, z-score separately within each section) | `preprocessing/preprocess_tonsil.py --gene-list gene_lists/tonsil_genes_3500.txt` |
+| Tonsil RNA (3,500 training HVGs, log1p, train-fitted z-score) and protein (log1p, train-fitted z-score applied to both sections) | `preprocessing/preprocess_tonsil.py --gene-list gene_lists/tonsil_genes_3500.txt` |
 | Spleen RNA (3,500 training HVGs, genes of the measured proteins always kept), protein and hires coordinates | `preprocessing/preprocess_spleen.py --gene-list gene_lists/spleen_genes_3500.txt` |
 | Liver RNA (same recipe as spleen) and protein | `preprocessing/preprocess_liver.py --gene-list gene_lists/liver_genes_3500.txt` |
 | Tonsil UNI2-H features, 256–1,280 px fields | `preprocessing/extract_features_tonsil_uni2h.py` (needs access to [MahmoodLab/UNI2-h](https://huggingface.co/MahmoodLab/UNI2-h)) |
